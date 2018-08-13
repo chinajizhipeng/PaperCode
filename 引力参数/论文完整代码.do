@@ -1,8 +1,6 @@
 *一、清理前两个模型的数据
 ***使用基础数据，海关数据库和工业企业数据库合并
-clear
-set more off
-use D:\firmdata\cus-indu.dta
+use D:\引力参数\数据集\贸易数据\cus-indu.dta,clear
 drop exp_or_imp company city tel phone name   //删除多余变量
 **根据ISIC行业划分
 gen hs6 = substr(hs_id,1,6) //提取海关编码前六位
@@ -19,44 +17,23 @@ merge n:1 yr firmn using D:\引力参数\数据集\fimn_num.dta
 keep if _merge == 3
 drop _merge tfp_OLS
 save D:\引力参数\回归数据\gra_raw.dta,replace //未添加解释变量
-**完全平衡面板处理
-*企业 140501家企业
-use  D:\引力参数\回归数据\gra_raw.dta,clear
-merge n:1 iso3 using D:\引力参数\数据集\完全平衡\iso31.dta
-keep if _merge == 3
-drop _merge
-keep firmn 
-duplicates drop firmn,force
-gen me = 1
-save D:\引力参数\数据集\完全平衡\firmn.dta,replace
-*国家 204个国家
-use D:\firmdata\cus-indu.dta,clear
-keep iso3 
-duplicates drop iso3,force
-gen me = 1
-save D:\引力参数\数据集\完全平衡\iso3.dta,replace
-use D:\引力参数\数据集\ConDIST.dta,clear
-keep iso3 
-save D:\引力参数\数据集\完全平衡\iso31.dta,replace
-use D:\引力参数\数据集\完全平衡\iso3.dta,clear
-merge 1:1 iso3 using D:\引力参数\数据集\完全平衡\iso31.dta
-keep if _merge == 3
-drop _merge
-save D:\引力参数\数据集\完全平衡\iso3.dta,replace
-*年份
-use D:\firmdata\cus-indu.dta,clear
-drop if yr < 2000
-keep yr
-duplicates drop yr,force
-gen me = 1
-sort yr
-save D:\引力参数\数据集\完全平衡\yr.dta,replace
-*剔除不符合的样本
-use D:\引力参数\回归数据\gra_raw.dta,clear
+*删除国家代码不匹配的样本
+use D:\引力参数\回归数据\gra_raw.dta,clear 
 merge n:1 iso3 using D:\引力参数\数据集\完全平衡\iso3.dta
 keep if _merge == 3
 drop _merge me
 save D:\引力参数\数据集\完全平衡\firmn_iso_isic.dta,replace
+**完全平衡面板处理
+*企业 140501家企业
+use  D:\引力参数\数据集\完全平衡\firmn_iso_isic.dta,clear
+keep firmn
+duplicates drop firmn,force
+save D:\引力参数\数据集\完全平衡\firmn.dta,replace
+*国家 204个国家
+use  D:\引力参数\数据集\完全平衡\firmn_iso_isic.dta,clear
+keep iso3 
+duplicates drop iso3,force
+save D:\引力参数\数据集\完全平衡\iso3.dta,replace
 ***TFP清理+估计
 *使用普通生产率估计
 use D:\引力参数\matchpanel.dta,clear
@@ -124,7 +101,7 @@ save D:\引力参数\数据集\fimn_num.dta,replace
 ***LOGISTIC 数据处理
 **切分完全平衡面板数据 按行业
 foreach file in 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 {
-use  D:\引力参数\数据集\完全平衡\firmn_iso_isic.dta,clear
+use D:\引力参数\数据集\完全平衡\firmn_iso_isic.dta,clear
 keep if isic == `file'
 save D:\引力参数\数据集\完全平衡\isic_ex`file'.dta,replace 
 }
@@ -192,11 +169,11 @@ qui tostring yr,replace
 qui gen yr_iso = yr + iso3
 qui destring yr,replace
 qui egen reg_id = group(id) 
-qui save E:\reg\reg`file'.dta,replace
+qui save D:\引力参数\回归数据\行业分割\logistic\reg`file'.dta,replace
 di `file'
 }
 ***GRAVITY 数据处理
-use D:\引力参数\回归数据\gra_raw.dta,clear
+use D:\引力参数\数据集\完全平衡\firmn_iso_isic.dta,clear
 *添加距离和毗邻变量
 merge n:1 iso3  using D:\引力参数\数据集\ConDIST.dta
 keep if _merge == 3
@@ -207,7 +184,7 @@ keep if _merge == 3
 drop _merge 
 destring isic2 ,gen(isic)   //分行业使用
 gen lndis = ln(dist)
-gen lngdp = ln(gdp)
+gen lngdp = ln(chngdp)
 gen lnexp = ln(industy_value)
 gen regid = iso3+firmn
 tostring yr,replace
@@ -224,14 +201,17 @@ save D:\引力参数\回归数据\行业分割\gravity\gravity`file'.dta,replace
 }
 ************
 *****模型回归
-***第一个模型 *logit
+***第一个模型 logit
 log using D:\引力参数\回归数据\行业分割\logistic\logistic.log,replace 
 set more off 
 foreach file in 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 {
-qui use E:\reg\reg`file'.dta,clear
-qui logit pro lndis lngdp i.yr
+qui use D:\引力参数\回归数据\行业分割\logistic\reg`file'.dta,clear
+qui merge n:1 firmn yr using D:\引力参数\数据集\完全平衡\firmn_employment.dta 
+qui keep if _merge == 3
+qui gen lne = ln(employment)
+logit pro lndis lngdp lne i.yr
 di `file'
-di _b[lndis]   ///得到第一个参数
+di _b[lndis]   //得到第一个参数
 }
 log close
 ***第二个模型 gravity
@@ -245,9 +225,9 @@ qui keep if _merge == 3
 qui gen lne = ln( employment )
 egen id = group(regid)
 qui xtset id yr
-qui xi:reg lnexp lndis lngdp lne i.yr
+xi:reg lnexp lndis lngdp lne i.yr
 di `file' 
-di _b[lndis]  ///得到第二个参数
+di _b[lndis]  //得到第二个参数
 }
 log close
 
@@ -272,14 +252,14 @@ log using D:\引力参数\回归数据\行业分割\tfp\tfp.log,replace
 set more off
 foreach file in 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 {
 use D:\引力参数\回归数据\行业分割\tfp\tfp`file'.dta,clear
-gsort yr tfp_OLS
-bys yr :gen cum_out = sum(outputi)
+gsort yr -tfp_OLS
+bys yr:gen cum_out = sum(outputi)
 egen firmid=group(firmn)
-gen lny  = ln(cum_out-outputi)
+gen lny  = ln(cum_out)
 gen lntfp = ln(tfp_OLS)
 xtset firmid yr
-qui xi:xtreg lny lntfp  i.yr 
+xi:xtreg lny lntfp i.yr 
 di `file'
-di _b[lntfp]  ///得到第三个参数
+di _b[lntfp]  
 }
 log close
