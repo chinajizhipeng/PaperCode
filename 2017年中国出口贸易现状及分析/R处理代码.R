@@ -57,10 +57,60 @@ ggplot(lj_long_pro,aes(x=variable,y=percent,fill = iso,group = iso))+
 ggplot(lj_long,aes(x=variable,y=value,fill = iso,group = iso))+
   geom_area()+
   scale_fill_brewer(palette = "Pastel1")
+#折线图
+ggplot(lj_long_pro,aes(x = variable,y = percent,group = iso,shape = iso))+
+  geom_line(size = 0.8)+
+  geom_point(size = 2)+
+  geom_hline(yintercept = 0)+
+  labs(shape = "地区")+
+  ylab("百分比")+
+  theme(axis.title.x = element_blank())+
+  theme(legend.text = element_text(size = 13))+
+  theme(panel.background = element_blank())+
+  theme(axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size = rel(1.5),angle = 30,hjust=1,vjust=1))+
+  theme(axis.title.y = element_text(size = 14))+
+  theme(legend.position = "bottom")
 ###分商品
 sp <- read.csv("E:\\论文学习\\论文\\2017年中国贸易现状及未来展望\\数据\\分商品\\R.csv")
 sp_long <- melt(sp,id.vars = "type")
 levels(sp_long$variable) <- c(2010:2017)
+#折线图 ——增长率
+sp <- read.csv("E:\\论文学习\\论文\\2017年中国贸易现状及未来展望\\数据\\分商品\\zengzhang.csv")
+sp_long <- melt(sp,id.vars = "type")
+levels(sp_long$variable) <- c(2010:2017)
+ggplot(sp_long,aes(x = variable,y = value,group = type,shape = type))+
+  geom_line(size = 0.8)+
+  geom_point(size = 3.5)+
+  geom_hline(yintercept = 0)+
+  labs(shape = "")+
+  ylab("增长率")+
+  theme(axis.title.x = element_blank())+
+  theme(legend.text = element_text(size = 13))+
+  theme(panel.background = element_blank())+
+  theme(axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size = rel(1.5),angle = 30,hjust=1,vjust=1))+
+  theme(axis.title.y = element_text(size = 14))+
+  theme(legend.position = "bottom")
+#折线图 - 占有率
+sp <- read.csv("E:\\论文学习\\论文\\2017年中国贸易现状及未来展望\\数据\\分商品\\R.csv")
+sp_long <- melt(sp,id.vars = "type")
+levels(sp_long$variable) <- c(2010:2017)
+sp_long_pro <- ddply(sp_long,"variable",transform,
+                     percent = value/sum(value)*100)
+ggplot(sp_long_pro,aes(x = variable,y = percent,group = type,shape = type))+
+  geom_line(size = 0.8)+
+  geom_point(size = 3.5)+
+  geom_hline(yintercept = 0)+
+  labs(shape = "")+
+  ylab("百分比")+
+  theme(axis.title.x = element_blank())+
+  theme(legend.text = element_text(size = 13))+
+  theme(panel.background = element_blank())+
+  theme(axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size = rel(1.5),angle = 30,hjust=1,vjust=1))+
+  theme(axis.title.y = element_text(size = 14))+
+  theme(legend.position = "bottom")
 #堆积图
 ggplot(sp_long,aes(x=variable,y=value,fill = type,group = type))+
   geom_area()+
@@ -90,6 +140,7 @@ ggplot(sp_long_pro,aes(x=variable,y=percent,fill = type,group = type))+
   theme(legend.justification = "center")
 
 ###分组织
+#增长率
 or <- read.csv("E:\\论文学习\\论文\\2017年中国贸易现状及未来展望\\数据\\分组织\\R1.csv")
 or_long <- melt(or,id.vars = "ID")
 levels(or_long$variable) <- c(2010:2017)
@@ -106,13 +157,27 @@ ggplot(or_long,aes(x = variable,y = value,group = ID,shape = ID))+
   theme(axis.text.x = element_text(size = rel(1.5),angle = 30,hjust=1,vjust=1))+
   theme(axis.title.y = element_text(size = 14))+
   theme(legend.position = "bottom")
-
-
-
-
-
-
-
+#堆积图
+or2 <- read.csv("E:\\论文学习\\论文\\2017年中国贸易现状及未来展望\\数据\\分组织\\R2.csv")
+or2_long <- melt(or2,id.vars = "ID")
+levels(or2_long$variable) <- c(2010:2017)
+wr <- read.csv("E:\\论文学习\\论文\\2017年中国贸易现状及未来展望\\数据\\分组织\\word.csv")
+or2_long <- merge(or2_long,wr,by.x = "variable",by.y = "y")
+or2_long_pro <- ddply(or2_long,"variable",transform,
+                     percent = value/world*100)
+ggplot(or2_long_pro,aes(x = variable,y = percent,group = ID,shape = ID))+
+  geom_line(size = 0.8)+
+  geom_point(size = 2)+
+  geom_hline(yintercept = 0)+
+  labs(shape = "区域组织")+
+  ylab("百分比")+
+  theme(axis.title.x = element_blank())+
+  theme(legend.text = element_text(size = 13))+
+  theme(panel.background = element_blank())+
+  theme(axis.line = element_line(colour = "black"))+
+  theme(axis.text.x = element_text(size = rel(1.5),angle = 30,hjust=1,vjust=1))+
+  theme(axis.title.y = element_text(size = 14))+
+  theme(legend.position = "bottom")
 
 
 
